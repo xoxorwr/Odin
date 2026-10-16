@@ -5122,19 +5122,6 @@ gb_internal void check_decl_attributes(CheckerContext *c, Array<Ast *> const &at
 	StringSet set = {};
 	defer (string_set_destroy(&set));
 
-	bool is_runtime = false;
-	if (c->scope && c->scope->file && (c->scope->flags & ScopeFlag_File) &&
-	    c->scope->file->pkg &&
-	    c->scope->file->pkg->kind == Package_Runtime) {
-		is_runtime = true;
-	} else if (c->scope && c->scope->parent &&
-		(c->scope->flags & ScopeFlag_Proc) &&
-		(c->scope->parent->flags & ScopeFlag_File) &&
-		c->scope->parent->file->pkg &&
-		c->scope->parent->file->pkg->kind == Package_Runtime) {
-		is_runtime = true;
-	}
-
 	for_array(i, attributes) {
 		Ast *attr = attributes[i];
 		if (attr->kind != Ast_Attribute) continue;
@@ -5170,7 +5157,7 @@ gb_internal void check_decl_attributes(CheckerContext *c, Array<Ast *> const &at
 				continue;
 			}
 
-			if (name == "builtin" && is_runtime) {
+			if (name == "builtin") {
 				continue;
 			}
 
@@ -5315,7 +5302,7 @@ gb_internal void check_builtin_attributes(CheckerContext *ctx, Entity *e, Array<
 	default:
 		return;
 	}
-	if (!((ctx->scope->flags&ScopeFlag_File) && ctx->scope->file->pkg->kind == Package_Runtime)) {
+	if (!(ctx->scope->flags & ScopeFlag_File)) {
 		return;
 	}
 
