@@ -1462,6 +1462,7 @@ gb_internal void check_proc_decl(CheckerContext *ctx, Entity *e, DeclInfo *d) {
 	//				 The same is true for the linkage, set below.
 	e->Procedure.entry_point_only = ac.entry_point_only;
 	e->Procedure.is_export = ac.is_export;
+	e->Procedure.is_watched = ac.watch;
 
 	bool has_instrumentation = false;
 	if (pl->body == nullptr) {

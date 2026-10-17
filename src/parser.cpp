@@ -7846,6 +7846,19 @@ gb_internal ParseFileError parse_packages(Parser *p, String init_filename) {
 			}
 			try_add_import_path(p, s, s, init_pos, Package_Normal);
 		}
+
+		if (build_context.command_kind == Command_watch) {
+			// `odin watch` injects the hotpatch runtime automatically so that
+			// watched procedures can be patched in the running process. The
+			// package is added by path (not through the `core` collection) so
+			// that it also works with `-bedrock`, which removes `core`.
+			bool ok = false;
+			String s = get_fullpath_relative(permanent_allocator(), odin_root_dir(), str_lit("core/hotpatch"), &ok);
+			if (!ok) {
+				compiler_error("Unable to find the 'core/hotpatch' package. Is the ODIN_ROOT set up correctly?");
+			}
+			try_add_import_path(p, s, s, init_pos, Package_Normal);
+		}
 		
 
 		for (String const &path : build_context.extra_packages) {

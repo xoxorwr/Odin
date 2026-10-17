@@ -232,6 +232,12 @@ gb_internal lbProcedure *lb_create_procedure(lbModule *m, Entity *entity, bool i
 		}
 	}
 
+	// NOTE: watched procedures must survive optimization with a stable, resolvable
+	// symbol so the hotpatching runtime can overwrite their entry point.
+	if (entity->Procedure.is_watched) {
+		lb_add_attribute_to_proc(m, p->value, "noinline");
+	}
+
 	switch (entity->Procedure.optimization_mode) {
 	case ProcedureOptimizationMode_None:
 		lb_add_attribute_to_proc(m, p->value, "optnone");
@@ -285,7 +291,7 @@ gb_internal lbProcedure *lb_create_procedure(lbModule *m, Entity *entity, bool i
 
 		lb_set_wasm_export_attributes(p->value, p->name);
 	} else if (!p->is_foreign) {
-		if (USE_SEPARATE_MODULES) {
+		if (USE_SEPARATE_MODULES || entity->Procedure.is_watched) {
 			LLVMSetLinkage(p->value, LLVMExternalLinkage);
 		} else {
 			LLVMSetLinkage(p->value, LLVMInternalLinkage);

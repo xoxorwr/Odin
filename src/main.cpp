@@ -78,6 +78,8 @@ gb_global Timings global_timings = {0};
 
 #include "bug_report.cpp"
 
+#include "watch.cpp"
+
 #if defined(GB_SYSTEM_OSX) || defined(GB_SYSTEM_UNIX)
 int run_subprocess(const char *name, const char **args, bool honor_path = false);
 #endif
@@ -385,6 +387,7 @@ gb_internal void usage(String argv0, String argv1 = {}) {
 	print_usage_line(1, "check             Parses and type checks a directory of .odin files.");
 	print_usage_line(1, "strip-semicolon   Parses, type checks, and removes unneeded semicolons from the entire program.");
 	print_usage_line(1, "test              Builds and runs procedures with the attribute @(test) in the initial package.");
+	print_usage_line(1, "watch             Same as 'run', but hotpatches @(watch) procedures when sources change.");
 	print_usage_line(1, "doc               Generates documentation from a directory of .odin files.");
 	print_usage_line(1, "version           Prints version.");
 	print_usage_line(1, "report            Prints information useful to reporting a bug.");
@@ -2934,6 +2937,16 @@ gb_internal int print_show_help(String const arg0, String command, String option
 		print_usage_line(3, "odin run .                     Builds and runs package in current directory.");
 		print_usage_line(3, "odin run <dir>                 Builds and runs package in <dir>.");
 		print_usage_line(3, "odin run filename.odin -file   Builds and runs single-file package, must contain entry point.");
+	} else if (command == "watch") {
+		print_usage_header_once();
+		print_usage_line(1, "watch   Same as 'run', but watches .odin source files and hotpatches the running");
+		print_usage_line(2, "process whenever a procedure annotated with @(watch) is recompiled.");
+		print_usage_line(2, "The core:hotpatch runtime is injected automatically (works with -bedrock too).");
+		print_usage_line(2, "Append an empty flag and then the args, '-- <args>', to specify args for the output.");
+		print_usage_line(2, "Examples:");
+		print_usage_line(3, "odin watch .                     Builds, runs and hotpatches package in current directory.");
+		print_usage_line(3, "odin watch <dir>                 Builds, runs and hotpatches package in <dir>.");
+		print_usage_line(3, "odin watch filename.odin -file   Builds, runs and hotpatches single-file package.");
 	} else if (command == "check") {
 		print_usage_header_once();
 		print_usage_line(1, "check   Parses and type checks directory of .odin files.");
@@ -2974,7 +2987,7 @@ gb_internal int print_show_help(String const arg0, String command, String option
 
 	bool doc             = command == "doc";
 	bool build           = command == "build";
-	bool run_or_build    = command == "run" || command == "build" || command == "test";
+	bool run_or_build    = command == "run" || command == "build" || command == "test" || command == "watch";
 	bool test_only       = command == "test";
 	bool strip_semicolon = command == "strip-semicolon";
 	bool check_only      = command == "check" || strip_semicolon;
@@ -4281,7 +4294,7 @@ int main(int arg_count, char const **arg_ptr) {
 	}
 
 	bool run_output = false;
-	if (command == "run" || command == "test") {
+	if (command == "run" || command == "test" || command == "watch") {
 		if (args.count < 3) {
 			usage(args[0]);
 			return 1;
@@ -4289,6 +4302,9 @@ int main(int arg_count, char const **arg_ptr) {
 		build_context.command_kind = Command_run;
 		if (command == "test") {
 			build_context.command_kind = Command_test;
+		} else if (command == "watch") {
+			build_context.command_kind = Command_watch;
+			build_context.keep_executable = true;
 		}
 
 		if (double_dash_pos != -1) {
@@ -4310,6 +4326,10 @@ int main(int arg_count, char const **arg_ptr) {
 
 		init_filename = args[2];
 		run_output = true;
+
+		if (command == "watch") {
+			watch_capture_build_args(args, run_args);
+		}
 
 	} else if (command == "build") {
 		if (args.count < 3) {
@@ -4903,6 +4923,8 @@ int main(int arg_count, char const **arg_ptr) {
 			}
 		}
 
+		watch_write_manifest(checker);
+
 		remove_temp_files(gen);
 	}
 
@@ -4945,6 +4967,10 @@ end_of_code_gen:;
 #if defined(GB_SYSTEM_WINDOWS)
 		int subprocess_res = run_subprocess(exe_name, after_double_dash_raw);
 #else
+		if (build_context.command_kind == Command_watch) {
+			return watch_run(exe_name);
+		}
+
 		const char* exe_name_cstring = alloc_cstring(heap_allocator(), exe_name);
 		Array<const char *> run_args_cstring = array_make<const char *>(heap_allocator(), 0, run_args.count);
 		defer({

@@ -135,6 +135,7 @@ struct AttributeContext {
 	bool    has_disabled_proc     : 1;
 	bool    disabled_proc         : 1;
 	bool    test                  : 1;
+	bool    watch                 : 1;
 	bool    init                  : 1;
 	bool    fini                  : 1;
 	bool    set_cold              : 1;

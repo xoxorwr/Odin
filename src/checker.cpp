@@ -2423,6 +2423,8 @@ gb_internal bool could_entity_be_lazy(Entity *e, DeclInfo *d) {
 			if (name.len != 0) {
 				if (name == "test") {
 					return false;
+				} else if (name == "watch") {
+					return false;
 				} else if (name == "export") {
 					return false;
 				} else if (name == "init") {
@@ -3313,7 +3315,7 @@ gb_internal WORKER_TASK_PROC(add_definitions_to_set_worker) {
 				add_dependency_to_set_threaded(c, e);
 			}
 		} else if (e->kind == Entity_Procedure) {
-			if (e->Procedure.is_export) {
+			if (e->Procedure.is_export || e->Procedure.is_watched) {
 				add_dependency_to_set_threaded(c, e);
 			}
 		} else if (e->kind == Entity_Variable) {
@@ -4300,6 +4302,12 @@ gb_internal DECL_ATTRIBUTE_PROC(proc_decl_attribute) {
 			error(value, "Expected no value for '%.*s'", LIT(name));
 		}
 		ac->test = true;
+		return true;
+	} else if (name == "watch") {
+		if (value != nullptr) {
+			error(value, "Expected no value for '%.*s'", LIT(name));
+		}
+		ac->watch = true;
 		return true;
 	} else if (name == "export") {
 		ExactValue ev = check_decl_attribute_value(c, value);

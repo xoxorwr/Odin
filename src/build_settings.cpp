@@ -225,8 +225,10 @@ enum CommandKind : u64 {
 	Command_bundle_ios     = 1<<10,
 	Command_bundle_orca    = 1<<11,
 
-	Command__does_check = Command_run|Command_build|Command_check|Command_doc|Command_test|Command_strip_semicolon,
-	Command__does_build = Command_run|Command_build|Command_test,
+	Command_watch          = 1<<12,
+
+	Command__does_check = Command_run|Command_build|Command_check|Command_doc|Command_test|Command_strip_semicolon|Command_watch,
+	Command__does_build = Command_run|Command_build|Command_test|Command_watch,
 	Command_all = ~(CommandKind)0,
 };
 
@@ -243,6 +245,7 @@ gb_global char const *odin_command_strings[32] = {
 	"bundle macos",
 	"bundle ios",
 	"bundle orca",
+	"watch",
 };
 
 
